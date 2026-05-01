@@ -1277,6 +1277,16 @@ function onVladAuthInput() {
     saveSettingsDebounced();
 }
 
+function onArliaiUrlInput() {
+    extension_settings.sd.arliai_url = $('#sd_arliai_url').val();
+    saveSettingsDebounced();
+}
+
+function onArliaiAuthInput() {
+    extension_settings.sd.arliai_auth = $('#sd_arliai_auth').val();
+    saveSettingsDebounced();
+}
+
 function onDrawthingsUrlInput() {
     extension_settings.sd.drawthings_url = $('#sd_drawthings_url').val();
     saveSettingsDebounced();
@@ -1441,6 +1451,30 @@ async function validateVladUrl() {
         toastr.success('SD.Next API connected.');
     } catch (error) {
         toastr.error(`Could not validate SD.Next API: ${error.message}`);
+    }
+}
+
+async function validateArliaiUrl() {
+    try {
+        if (!extension_settings.sd.arliai_url) {
+            throw new Error('URL is not set.');
+        }
+
+        const result = await fetch('/api/sd/models', {
+            method: 'POST',
+            headers: getRequestHeaders(),
+            body: JSON.stringify(getSdRequestBody()),
+        });
+
+        if (!result.ok) {
+            throw new Error('ArliAI returned an error.');
+        }
+
+        await loadArliaiModels();
+        await loadArliaiSamplers();
+        toastr.success('ArliAI URL verified.');
+    } catch (error) {
+        toastr.error(`Could not validate ArliAI URL: ${error.message}`);
     }
 }
 
@@ -5095,6 +5129,8 @@ function isValidState() {
             return !!extension_settings.sd.drawthings_url;
         case sources.vlad:
             return !!extension_settings.sd.vlad_url;
+        case sources.arliai:
+            return !!extension_settings.sd.arliai_url;
         case sources.novel:
             return secret_state[SECRET_KEYS.NOVEL];
         case sources.openai:
@@ -5842,6 +5878,9 @@ export async function init() {
     $('#sd_vlad_validate').on('click', validateVladUrl);
     $('#sd_vlad_url').on('input', onVladUrlInput);
     $('#sd_vlad_auth').on('input', onVladAuthInput);
+    $('#sd_arliai_validate').on('click', validateArliaiUrl);
+    $('#sd_arliai_url').on('input', onArliaiUrlInput);
+    $('#sd_arliai_auth').on('input', onArliaiAuthInput);
     $('#sd_hr_upscaler').on('change', onHrUpscalerChange);
     $('#sd_hr_scale').on('input', onHrScaleInput);
     $('#sd_denoising_strength').on('input', onDenoisingStrengthInput);
