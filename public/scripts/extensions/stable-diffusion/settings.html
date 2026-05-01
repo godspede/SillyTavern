@@ -42,6 +42,7 @@
             <label for="sd_source" data-i18n="Source">Source</label>
             <select id="sd_source" class="text_pole">
                 <option value="aimlapi">AI/ML API</option>
+                <option value="arliai">ArliAI</option>
                 <option value="bfl">BFL (Black Forest Labs)</option>
                 <option value="chutes">Chutes</option>
                 <option value="workersai">Cloudflare Workers AI</option>
@@ -145,6 +146,21 @@
                 <label for="sd_vlad_auth" data-i18n="Authentication (optional)">Authentication (optional)</label>
                 <input id="sd_vlad_auth" type="text" class="text_pole"  data-i18n="[placeholder]Example: username:password" placeholder="Example: username:password" value="" />
                 <i data-i18n="The server must be accessible from the SillyTavern host machine.">The server must be accessible from the SillyTavern host machine.</i>
+            </div>
+            <div data-sd-source="arliai">
+                <label for="sd_arliai_url">ArliAI API URL</label>
+                <div class="flex-container flexnowrap">
+                    <input id="sd_arliai_url" type="text" class="text_pole" data-i18n="[placeholder]sd_arliai_url" placeholder="https://api.arliai.com" value="https://api.arliai.com" />
+                    <div id="sd_arliai_validate" class="menu_button menu_button_icon">
+                        <i class="fa-solid fa-plug"></i>
+                        <span data-i18n="Connect">
+                            Connect
+                        </span>
+                    </div>
+                </div>
+                <small><i><span data-i18n="Get an API key at">Get an API key at</span> <a target="_blank" href="https://www.arliai.com/">arliai.com</a></i></small>
+                <label for="sd_arliai_auth" data-i18n="API Key">API Key</label>
+                <input id="sd_arliai_auth" type="text" class="text_pole" data-i18n="[placeholder]Paste your ArliAI API key" placeholder="Paste your ArliAI API key" value="" />
             </div>
             <div data-sd-source="horde">
                 <i data-i18n="Hint: Save an API key in AI Horde API settings to use it here.">Hint: Save an API key in AI Horde API settings to use it here.</i>
@@ -436,7 +452,7 @@
             </div>
 
             <div class="flex-container">
-                <div class="flex1" data-sd-source="extras,horde,auto,drawthings,novel,vlad,comfy,sdcpp">
+                <div class="flex1" data-sd-source="extras,horde,auto,drawthings,novel,vlad,comfy,sdcpp,arliai">
                     <label for="sd_sampler" data-i18n="Sampling method">Sampling method</label>
                     <select id="sd_sampler" class="text_pole"></select>
                 </div>
@@ -533,7 +549,7 @@
                 </div>
             </div>
 
-            <div class="flex-container marginTopBot5" data-sd-source="auto,vlad,extras,horde,drawthings">
+            <div class="flex-container marginTopBot5" data-sd-source="auto,vlad,extras,horde,drawthings,arliai">
                 <label class="flex1 checkbox_label">
                     <input id="sd_restore_faces" type="checkbox" />
                     <small data-i18n="Restore Faces">Restore Faces</small>
@@ -578,7 +594,7 @@
                 </label>
             </div>
 
-            <div data-sd-source="novel,togetherai,pollinations,comfy,drawthings,vlad,auto,horde,extras,stability,bfl,sdcpp" class="marginTop5">
+            <div data-sd-source="novel,togetherai,pollinations,comfy,drawthings,vlad,auto,horde,extras,stability,bfl,sdcpp,arliai" class="marginTop5">
                 <label for="sd_seed">
                     <span data-i18n="Seed">Seed</span>
                     <small data-i18n="(-1 for random)">(-1 for random)</small>
