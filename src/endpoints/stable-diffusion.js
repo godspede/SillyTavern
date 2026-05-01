@@ -349,6 +349,46 @@ router.post('/generate', async (request, response) => {
     }
 });
 
+router.post('/arliai/generate', async (request, response) => {
+    try {
+        const controller = new AbortController();
+        request.socket.removeAllListeners('close');
+        request.socket.on('close', () => controller.abort());
+
+        const { auth: _auth, ...loggedBody } = request.body;
+        console.info('ArliAI request to', request.body.url, '| body:', loggedBody);
+
+        const txt2imgUrl = new URL(request.body.url);
+        txt2imgUrl.pathname = '/sdapi/v1/txt2img';
+        const t0 = Date.now();
+        const result = await fetch(txt2imgUrl, {
+            method: 'POST',
+            body: JSON.stringify(request.body),
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': getBasicAuthHeader(request.body.auth),
+            },
+            signal: controller.signal,
+        });
+        const elapsed = Date.now() - t0;
+
+        if (!result.ok) {
+            const text = await result.text();
+            console.error(`ArliAI txt2img failed: HTTP ${result.status} ${result.statusText} after ${elapsed}ms`);
+            console.error('Upstream response body:', text);
+            return response.status(result.status).type('application/json').send(text || JSON.stringify({ error: result.statusText }));
+        }
+
+        console.info(`ArliAI txt2img succeeded in ${elapsed}ms`);
+        const data = await result.json();
+        return response.send(data);
+    } catch (error) {
+        console.error('ArliAI proxy error:', error?.name, error?.message, error?.cause ?? '');
+        if (error?.stack) console.error(error.stack);
+        return response.status(500).type('application/json').send(JSON.stringify({ error: error?.message || 'proxy error' }));
+    }
+});
+
 router.post('/sd-next/upscalers', async (request, response) => {
     try {
         const url = new URL(request.body.url);
