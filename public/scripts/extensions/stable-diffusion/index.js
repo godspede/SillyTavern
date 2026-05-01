@@ -79,6 +79,7 @@ const sources = {
     vlad: 'vlad',
     openai: 'openai',
     aimlapi: 'aimlapi',
+    arliai: 'arliai',
     comfy: 'comfy',
     togetherai: 'togetherai',
     drawthings: 'drawthings',
@@ -294,6 +295,9 @@ const defaultSettings = {
     vlad_url: 'http://localhost:7860',
     vlad_auth: '',
 
+    arliai_url: 'https://api.arliai.com',
+    arliai_auth: '',
+
     drawthings_url: 'http://localhost:7860',
     drawthings_auth: '',
 
@@ -439,6 +443,8 @@ function getSdRequestBody() {
     switch (extension_settings.sd.source) {
         case sources.vlad:
             return { url: extension_settings.sd.vlad_url, auth: extension_settings.sd.vlad_auth };
+        case sources.arliai:
+            return { url: extension_settings.sd.arliai_url, auth: extension_settings.sd.arliai_auth };
         case sources.auto:
             return { url: extension_settings.sd.auto_url, auth: extension_settings.sd.auto_auth };
         case sources.drawthings:
@@ -532,6 +538,8 @@ async function loadSettings() {
     $('#sd_sdcpp_url').val(extension_settings.sd.sdcpp_url);
     $('#sd_vlad_url').val(extension_settings.sd.vlad_url);
     $('#sd_vlad_auth').val(extension_settings.sd.vlad_auth);
+    $('#sd_arliai_url').val(extension_settings.sd.arliai_url);
+    $('#sd_arliai_auth').val(extension_settings.sd.arliai_auth);
     $('#sd_drawthings_url').val(extension_settings.sd.drawthings_url);
     $('#sd_drawthings_auth').val(extension_settings.sd.drawthings_auth);
     $('#sd_interactive_mode').prop('checked', extension_settings.sd.interactive_mode);
