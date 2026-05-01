@@ -1539,6 +1539,8 @@ async function onModelChange() {
 
     switchModelSpecificControls(extension_settings.sd.model);
 
+    // arliai is intentionally excluded — it routes per-request via sd_model_checkpoint
+    // in the txt2img body, with no global-state set-model endpoint to call.
     const updateRemoteModelSources = [
         sources.auto,
         sources.vlad,
@@ -3463,6 +3465,9 @@ async function sendGenerationRequest(generationType, prompt, additionalNegativeP
             case sources.vlad:
                 result = await generateAutoImage(prefixedPrompt, negativePrompt, signal);
                 break;
+            case sources.arliai:
+                result = await generateArliaiImage(prefixedPrompt, negativePrompt, signal);
+                break;
             case sources.drawthings:
                 result = await generateDrawthingsImage(prefixedPrompt, negativePrompt, signal);
                 break;
@@ -3976,6 +3981,51 @@ async function generateAutoImage(prompt, negativePrompt, signal) {
         const text = await result.text();
         throw new Error(text);
     }
+}
+
+/**
+ * Generate an image using the ArliAI API.
+ * @param {string} prompt - The main image prompt.
+ * @param {string} negativePrompt - The negative prompt.
+ * @param {AbortSignal} signal - An AbortSignal for cancellation.
+ * @returns {Promise<{format: string, data: string}>} - Resolves with the generated image.
+ */
+async function generateArliaiImage(prompt, negativePrompt, signal) {
+    const payload = {
+        ...getSdRequestBody(),
+        sd_model_checkpoint: extension_settings.sd.model,
+        prompt: prompt,
+        negative_prompt: negativePrompt,
+        sampler_name: extension_settings.sd.sampler,
+        steps: extension_settings.sd.steps,
+        cfg_scale: extension_settings.sd.scale,
+        width: extension_settings.sd.width,
+        height: extension_settings.sd.height,
+        restore_faces: !!extension_settings.sd.restore_faces,
+        seed: extension_settings.sd.seed >= 0 ? extension_settings.sd.seed : undefined,
+        save_images: true,
+        send_images: true,
+        do_not_save_grid: false,
+        do_not_save_samples: false,
+    };
+
+    const result = await fetch('/api/sd/arliai/generate', {
+        method: 'POST',
+        headers: getRequestHeaders(),
+        signal: signal,
+        body: JSON.stringify(payload),
+    });
+
+    if (!result.ok) {
+        const text = await result.text();
+        throw new Error('ArliAI returned an error: ' + text);
+    }
+
+    const data = await result.json();
+    if (!data.images?.length) {
+        throw new Error('ArliAI returned no images.');
+    }
+    return { format: 'png', data: data.images[0] };
 }
 
 /**
