@@ -2700,6 +2700,9 @@ async function loadSchedulers() {
         case sources.vlad:
             schedulers = ['N/A'];
             break;
+        case sources.arliai:
+            schedulers = ['N/A'];
+            break;
         case sources.drawthings:
             schedulers = ['N/A'];
             break;
@@ -2821,6 +2824,9 @@ async function loadVaes() {
             vaes = ['N/A'];
             break;
         case sources.vlad:
+            vaes = ['N/A'];
+            break;
+        case sources.arliai:
             vaes = ['N/A'];
             break;
         case sources.drawthings:
