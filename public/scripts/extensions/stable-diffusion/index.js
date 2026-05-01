@@ -1660,25 +1660,6 @@ async function getVladRemoteUpscalers() {
     }
 }
 
-async function loadArliaiRemoteUpscalers() {
-    try {
-        const result = await fetch('/api/sd/sd-next/upscalers', {
-            method: 'POST',
-            headers: getRequestHeaders(),
-            body: JSON.stringify(getSdRequestBody()),
-        });
-
-        if (!result.ok) {
-            throw new Error('ArliAI returned an error.');
-        }
-
-        return await result.json();
-    } catch (error) {
-        console.error(error);
-        return [extension_settings.sd.hr_upscaler];
-    }
-}
-
 async function getDrawthingsRemoteUpscalers() {
     try {
         const result = await fetch('/api/sd/drawthings/get-upscaler', {

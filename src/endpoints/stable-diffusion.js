@@ -355,15 +355,15 @@ router.post('/arliai/generate', async (request, response) => {
         request.socket.removeAllListeners('close');
         request.socket.on('close', () => controller.abort());
 
-        const { auth: _auth, ...loggedBody } = request.body;
-        console.info('ArliAI request to', request.body.url, '| body:', loggedBody);
+        const { url: _url, auth: _auth, ...upstreamBody } = request.body;
+        console.info('ArliAI request to', request.body.url, '| body:', upstreamBody);
 
         const txt2imgUrl = new URL(request.body.url);
         txt2imgUrl.pathname = '/sdapi/v1/txt2img';
         const t0 = Date.now();
         const result = await fetch(txt2imgUrl, {
             method: 'POST',
-            body: JSON.stringify(request.body),
+            body: JSON.stringify(upstreamBody),
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': getBasicAuthHeader(request.body.auth),
