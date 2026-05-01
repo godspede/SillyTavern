@@ -1658,6 +1658,25 @@ async function getVladRemoteUpscalers() {
     }
 }
 
+async function loadArliaiRemoteUpscalers() {
+    try {
+        const result = await fetch('/api/sd/sd-next/upscalers', {
+            method: 'POST',
+            headers: getRequestHeaders(),
+            body: JSON.stringify(getSdRequestBody()),
+        });
+
+        if (!result.ok) {
+            throw new Error('ArliAI returned an error.');
+        }
+
+        return await result.json();
+    } catch (error) {
+        console.error(error);
+        return [extension_settings.sd.hr_upscaler];
+    }
+}
+
 async function getDrawthingsRemoteUpscalers() {
     try {
         const result = await fetch('/api/sd/drawthings/get-upscaler', {
@@ -1736,6 +1755,9 @@ async function loadSamplers() {
             break;
         case sources.vlad:
             samplers = await loadVladSamplers();
+            break;
+        case sources.arliai:
+            samplers = await loadArliaiSamplers();
             break;
         case sources.openai:
             samplers = ['N/A'];
@@ -1927,6 +1949,28 @@ async function loadVladSamplers() {
     }
 }
 
+async function loadArliaiSamplers() {
+    if (!extension_settings.sd.arliai_url) {
+        return [];
+    }
+
+    try {
+        const result = await fetch('/api/sd/samplers', {
+            method: 'POST',
+            headers: getRequestHeaders(),
+            body: JSON.stringify(getSdRequestBody()),
+        });
+
+        if (!result.ok) {
+            throw new Error('ArliAI returned an error.');
+        }
+
+        return await result.json();
+    } catch (error) {
+        return [];
+    }
+}
+
 async function loadNovelSamplers() {
     return [
         'k_euler_ancestral',
@@ -1989,6 +2033,9 @@ async function loadModels() {
             break;
         case sources.vlad:
             models = await loadVladModels();
+            break;
+        case sources.arliai:
+            models = await loadArliaiModels();
             break;
         case sources.openai:
             models = await loadOpenAiModels();
@@ -2488,6 +2535,28 @@ async function loadVladModels() {
                 option.selected = upscaler === extension_settings.sd.hr_upscaler;
                 $('#sd_hr_upscaler').append(option);
             }
+        }
+
+        return await result.json();
+    } catch (error) {
+        return [];
+    }
+}
+
+async function loadArliaiModels() {
+    if (!extension_settings.sd.arliai_url) {
+        return [];
+    }
+
+    try {
+        const result = await fetch('/api/sd/models', {
+            method: 'POST',
+            headers: getRequestHeaders(),
+            body: JSON.stringify(getSdRequestBody()),
+        });
+
+        if (!result.ok) {
+            throw new Error('ArliAI returned an error.');
         }
 
         return await result.json();
