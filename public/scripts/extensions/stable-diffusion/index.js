@@ -1470,8 +1470,7 @@ async function validateArliaiUrl() {
             throw new Error('ArliAI returned an error.');
         }
 
-        await loadArliaiModels();
-        await loadArliaiSamplers();
+        await loadSettingOptions();
         toastr.success('ArliAI URL verified.');
     } catch (error) {
         toastr.error(`Could not validate ArliAI URL: ${error.message}`);
