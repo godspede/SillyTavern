@@ -355,7 +355,7 @@ router.post('/arliai/generate', async (request, response) => {
         request.socket.removeAllListeners('close');
         request.socket.on('close', () => controller.abort());
 
-        const { url: _url, auth: _auth, ...upstreamBody } = request.body;
+        const upstreamBody = _.omit(request.body, ['url', 'auth']);
         console.info('ArliAI request to', request.body.url, '| body:', upstreamBody);
 
         const txt2imgUrl = new URL(request.body.url);
