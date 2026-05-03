@@ -28,6 +28,29 @@ function getComfyWorkflows(directories) {
 
 export const router = express.Router();
 
+/**
+ * Resolves the auth value for an SD proxy request. For sources that store
+ * their key in the secrets store (e.g. arliai), reads from there; otherwise
+ * uses the auth string passed in the request body.
+ *
+ * The returned value is consumed by getBasicAuthHeader, which wraps it as
+ * Authorization: Basic base64(value). For ArliAI this is intentional —
+ * their image generation API documents support for both Bearer and Basic
+ * (with the API key as the password component); see
+ * https://www.arliai.com/docs/imggen?lang=en. Reusing Basic here keeps the
+ * call site identical to auto/vlad and avoids a second auth-formatting code
+ * path.
+ *
+ * @param {import('express').Request} request
+ * @returns {string}
+ */
+function resolveSdAuth(request) {
+    if (request.body.source === 'arliai') {
+        return readSecret(request.user.directories, SECRET_KEYS.ARLIAI) || '';
+    }
+    return request.body.auth || '';
+}
+
 router.post('/ping', async (request, response) => {
     try {
         const url = new URL(request.body.url);
@@ -36,7 +59,7 @@ router.post('/ping', async (request, response) => {
         const result = await fetch(url, {
             method: 'GET',
             headers: {
-                'Authorization': getBasicAuthHeader(request.body.auth),
+                'Authorization': getBasicAuthHeader(resolveSdAuth(request)),
             },
         });
 
@@ -145,7 +168,7 @@ router.post('/samplers', async (request, response) => {
         const result = await fetch(url, {
             method: 'GET',
             headers: {
-                'Authorization': getBasicAuthHeader(request.body.auth),
+                'Authorization': getBasicAuthHeader(resolveSdAuth(request)),
             },
         });
 
@@ -197,7 +220,7 @@ router.post('/models', async (request, response) => {
         const result = await fetch(url, {
             method: 'GET',
             headers: {
-                'Authorization': getBasicAuthHeader(request.body.auth),
+                'Authorization': getBasicAuthHeader(resolveSdAuth(request)),
             },
         });
 
@@ -296,29 +319,35 @@ router.post('/set-model', async (request, response) => {
 
 router.post('/generate', async (request, response) => {
     try {
-        try {
-            const optionsUrl = new URL(request.body.url);
-            optionsUrl.pathname = '/sdapi/v1/options';
-            const optionsResult = await fetch(optionsUrl, { headers: { 'Authorization': getBasicAuthHeader(request.body.auth) } });
-            if (optionsResult.ok) {
-                const optionsData = /** @type {any} */ (await optionsResult.json());
-                const isForge = 'forge_preset' in optionsData;
+        const auth = resolveSdAuth(request);
+        const isArliai = request.body.source === 'arliai';
 
-                if (!isForge) {
-                    _.unset(request.body, 'override_settings.forge_additional_modules');
+        // ArliAI doesn't implement /sdapi/v1/options; skip the forge probe for it.
+        if (!isArliai) {
+            try {
+                const optionsUrl = new URL(request.body.url);
+                optionsUrl.pathname = '/sdapi/v1/options';
+                const optionsResult = await fetch(optionsUrl, { headers: { 'Authorization': getBasicAuthHeader(auth) } });
+                if (optionsResult.ok) {
+                    const optionsData = /** @type {any} */ (await optionsResult.json());
+                    const isForge = 'forge_preset' in optionsData;
+
+                    if (!isForge) {
+                        _.unset(request.body, 'override_settings.forge_additional_modules');
+                    }
                 }
+            } catch (error) {
+                console.error('SD WebUI failed to get options:', error);
             }
-        } catch (error) {
-            console.error('SD WebUI failed to get options:', error);
         }
 
         const controller = new AbortController();
         request.socket.removeAllListeners('close');
         request.socket.on('close', function () {
-            if (!response.writableEnded) {
+            if (!response.writableEnded && !isArliai) {
                 const interruptUrl = new URL(request.body.url);
                 interruptUrl.pathname = '/sdapi/v1/interrupt';
-                fetch(interruptUrl, { method: 'POST', headers: { 'Authorization': getBasicAuthHeader(request.body.auth) } });
+                fetch(interruptUrl, { method: 'POST', headers: { 'Authorization': getBasicAuthHeader(auth) } });
             }
             controller.abort();
         });
@@ -326,12 +355,13 @@ router.post('/generate', async (request, response) => {
         console.debug('SD WebUI request:', request.body);
         const txt2imgUrl = new URL(request.body.url);
         txt2imgUrl.pathname = '/sdapi/v1/txt2img';
+        const upstreamBody = isArliai ? _.omit(request.body, ['url', 'auth', 'source']) : request.body;
         const result = await fetch(txt2imgUrl, {
             method: 'POST',
-            body: JSON.stringify(request.body),
+            body: JSON.stringify(upstreamBody),
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': getBasicAuthHeader(request.body.auth),
+                'Authorization': getBasicAuthHeader(auth),
             },
             signal: controller.signal,
         });
@@ -346,46 +376,6 @@ router.post('/generate', async (request, response) => {
     } catch (error) {
         console.error(error);
         return response.sendStatus(500);
-    }
-});
-
-router.post('/arliai/generate', async (request, response) => {
-    try {
-        const controller = new AbortController();
-        request.socket.removeAllListeners('close');
-        request.socket.on('close', () => controller.abort());
-
-        const upstreamBody = _.omit(request.body, ['url', 'auth']);
-        console.info('ArliAI request to', request.body.url, '| body:', upstreamBody);
-
-        const txt2imgUrl = new URL(request.body.url);
-        txt2imgUrl.pathname = '/sdapi/v1/txt2img';
-        const t0 = Date.now();
-        const result = await fetch(txt2imgUrl, {
-            method: 'POST',
-            body: JSON.stringify(upstreamBody),
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': getBasicAuthHeader(request.body.auth),
-            },
-            signal: controller.signal,
-        });
-        const elapsed = Date.now() - t0;
-
-        if (!result.ok) {
-            const text = await result.text();
-            console.error(`ArliAI txt2img failed: HTTP ${result.status} ${result.statusText} after ${elapsed}ms`);
-            console.error('Upstream response body:', text);
-            return response.status(result.status).type('application/json').send(text || JSON.stringify({ error: result.statusText }));
-        }
-
-        console.info(`ArliAI txt2img succeeded in ${elapsed}ms`);
-        const data = await result.json();
-        return response.send(data);
-    } catch (error) {
-        console.error('ArliAI proxy error:', error?.name, error?.message, error?.cause ?? '');
-        if (error?.stack) console.error(error.stack);
-        return response.status(500).type('application/json').send(JSON.stringify({ error: error?.message || 'proxy error' }));
     }
 });
 

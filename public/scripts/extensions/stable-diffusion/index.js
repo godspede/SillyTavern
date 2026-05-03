@@ -296,7 +296,6 @@ const defaultSettings = {
     vlad_auth: '',
 
     arliai_url: 'https://api.arliai.com',
-    arliai_auth: '',
 
     drawthings_url: 'http://localhost:7860',
     drawthings_auth: '',
@@ -444,7 +443,7 @@ function getSdRequestBody() {
         case sources.vlad:
             return { url: extension_settings.sd.vlad_url, auth: extension_settings.sd.vlad_auth };
         case sources.arliai:
-            return { url: extension_settings.sd.arliai_url, auth: extension_settings.sd.arliai_auth };
+            return { url: extension_settings.sd.arliai_url, source: sources.arliai };
         case sources.auto:
             return { url: extension_settings.sd.auto_url, auth: extension_settings.sd.auto_auth };
         case sources.drawthings:
@@ -539,7 +538,6 @@ async function loadSettings() {
     $('#sd_vlad_url').val(extension_settings.sd.vlad_url);
     $('#sd_vlad_auth').val(extension_settings.sd.vlad_auth);
     $('#sd_arliai_url').val(extension_settings.sd.arliai_url);
-    $('#sd_arliai_auth').val(extension_settings.sd.arliai_auth);
     $('#sd_drawthings_url').val(extension_settings.sd.drawthings_url);
     $('#sd_drawthings_auth').val(extension_settings.sd.drawthings_auth);
     $('#sd_interactive_mode').prop('checked', extension_settings.sd.interactive_mode);
@@ -1282,11 +1280,6 @@ function onArliaiUrlInput() {
     saveSettingsDebounced();
 }
 
-function onArliaiAuthInput() {
-    extension_settings.sd.arliai_auth = $('#sd_arliai_auth').val();
-    saveSettingsDebounced();
-}
-
 function onDrawthingsUrlInput() {
     extension_settings.sd.drawthings_url = $('#sd_drawthings_url').val();
     saveSettingsDebounced();
@@ -1538,8 +1531,6 @@ async function onModelChange() {
 
     switchModelSpecificControls(extension_settings.sd.model);
 
-    // arliai is intentionally excluded — it routes per-request via sd_model_checkpoint
-    // in the txt2img body, with no global-state set-model endpoint to call.
     const updateRemoteModelSources = [
         sources.auto,
         sources.vlad,
@@ -3989,7 +3980,7 @@ async function generateArliaiImage(prompt, negativePrompt, signal) {
         do_not_save_samples: false,
     };
 
-    const result = await fetch('/api/sd/arliai/generate', {
+    const result = await fetch('/api/sd/generate', {
         method: 'POST',
         headers: getRequestHeaders(),
         signal: signal,
@@ -5985,7 +5976,6 @@ export async function init() {
     $('#sd_vlad_auth').on('input', onVladAuthInput);
     $('#sd_arliai_validate').on('click', validateArliaiUrl);
     $('#sd_arliai_url').on('input', onArliaiUrlInput);
-    $('#sd_arliai_auth').on('input', onArliaiAuthInput);
     $('#sd_hr_upscaler').on('change', onHrUpscalerChange);
     $('#sd_hr_scale').on('input', onHrScaleInput);
     $('#sd_denoising_strength').on('input', onDenoisingStrengthInput);
